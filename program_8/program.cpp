@@ -1,11 +1,20 @@
-#include <stdio.h>
-#include <GL/glut.h>
+#include<stdio.h>
+#include<stdlib.h>
+#include<gl/glut.h>
 
-double xmin, ymin, xmax, ymax; //50 50 100 100
-double xvmin, yvmin, xvmax, yvmax; //200 200 300 300
+#define outcode int
+#define true 1
+#define false 0
+double xmin, ymin, xmax, ymax;
+double xvmin, yvmin, xvmax, yvmax;
+
+
+const int RIGHT = 4;
+const int LEFT = 8;
+const int TOP = 1;
+const int BOTTOM = 2;
 
 int n;
-
 struct line_segment {
 	int x1;
 	int y1;
@@ -13,85 +22,110 @@ struct line_segment {
 	int y2;
 };
 struct line_segment ls[10];
-int cliptest(double p, double q, double* u1, double* u2)
+
+outcode computeoutcode(double x, double y)
 {
-	double r;
-	if (p) r = q / p;  // to check whether p
-	if (p < 0.0)    // potentially entry point, update te
-	{
-		if (r > * u1)* u1 = r;
-		if (r > * u2) return(false); // line portion is outside
-	}
-	else
-		if (p > 0.0)    //  Potentially leaving point, update tl
-		{
-			if (r < *u2)* u2 = r;
-			if (r < *u1) return(false); // line portion is outside
-		}
-		else
-			if (p == 0.0)
-			{
-				if (q < 0.0) return(false); // line parallel to edge but outside
-			}
-	return(true);
+	outcode code = 0;
+	if (y > ymax)
+		code |= TOP;
+	else if (y < ymin)
+		code |= BOTTOM;
+	if (x > xmax)
+		code |= RIGHT;
+	else if (x < xmin)
+		code |= LEFT;
+
+	return code;
 }
 
-void LiangBarskyLineClipAndDraw(double x0, double y0, double x1, double y1)
+void cohensuther(double x0, double y0, double x1, double y1)
 {
-	double dx = x1 - x0, dy = y1 - y0, u1 = 0.0, u2 = 1.0;
-	//draw a red colored viewport
-	glColor3f(1.0, 0.0, 0.0);
-	glBegin(GL_LINE_LOOP);
-	glVertex2f(xvmin, yvmin);
-	glVertex2f(xvmax, yvmin);
-	glVertex2f(xvmax, yvmax);
-	glVertex2f(xvmin, yvmax);
-	glEnd();
-	if (cliptest(-dx, x0 - xmin, &u1, &u2))  // inside test wrt left edge
-		if (cliptest(dx, xmax - x0, &u1, &u2)) // inside test wrt right edge
-			if (cliptest(-dy, y0 - ymin, &u1, &u2)) // inside test wrt bottom edge
-				if (cliptest(dy, ymax - y0, &u1, &u2)) // inside test wrt top edge
-				{
-					if (u2 < 1.0)
-					{
-						x1 = x0 + u2 * dx;
-						y1 = y0 + u2 * dy;
-					}
-					if (u1 > 0.0)
-					{
-						x0 = x0 + u1 * dx;
-						y0 = y0 + u1 * dy;
-					}
-					// Window to viewport mappings
-					double sx = (xvmax - xvmin) / (xmax - xmin); // Scale parameters
-					double sy = (yvmax - yvmin) / (ymax - ymin);
-					double vx0 = xvmin + (x0 - xmin) * sx;
-					double vy0 = yvmin + (y0 - ymin) * sy;
-					double vx1 = xvmin + (x1 - xmin) * sx;
-					double vy1 = yvmin + (y1 - ymin) * sy;
+	outcode outcode0, outcode1, outcodeout;
+	bool accept = false, done = false;
 
-					glColor3f(0.0, 0.0, 1.0); // draw blue colored clipped line
-					glBegin(GL_LINES);
-					glVertex2d(vx0, vy0);
-					glVertex2d(vx1, vy1);
-					glEnd();
-				}
-}// end of line clipping
+	outcode0 = computeoutcode(x0, y0);
+	outcode1 = computeoutcode(x1, y1);
+
+	do
+	{
+		if (!(outcode0 | outcode1))
+		{
+			accept = true;
+			done = true;
+		}
+		else if (outcode0 & outcode1)
+			done = true;
+		else
+		{
+			double x, y;
+			outcodeout = outcode0 ? outcode0 : outcode1;
+			if (outcodeout & TOP)
+			{
+				x = x0 + (x1 - x0) * (ymax - y0) / (y1 - y0);
+				y = ymax;
+			}
+			else if (outcodeout & BOTTOM)
+			{
+				x = x0 + (x1 - x0) * (ymin - y0) / (y1 - y0);
+				y = ymin;
+			}
+			else if (outcodeout & RIGHT)
+			{
+				y = y0 + (y1 - y0) * (xmax - x0) / (x1 - x0);
+				x = xmax;
+			}
+			else
+			{
+				y = y0 + (y1 - y0) * (xmin - x0) / (x1 - x0);
+				x = xmin;
+			}
+
+			if (outcodeout == outcode0)
+			{
+				x0 = x;
+				y0 = y;
+				outcode0 = computeoutcode(x0, y0);
+			}
+			else
+			{
+				x1 = x;
+				y1 = y;
+				outcode1 = computeoutcode(x1, y1);
+			}
+		}
+
+	} while (!done);
+
+	if (accept)
+	{
+		double sx = (xvmax - xvmin) / (xmax - xmin);
+		double sy = (yvmax - yvmin) / (ymax - ymin);
+		double vx0 = xvmin + (x0 - xmin) * sx;
+		double vy0 = yvmin + (y0 - ymin) * sy;
+		double vx1 = xvmin + (x1 - xmin) * sx;
+		double vy1 = yvmin + (y1 - ymin) * sy;
+
+		glColor3f(1, 0, 0);
+		glBegin(GL_LINE_LOOP);
+		glVertex2f(xvmin, yvmin);
+		glVertex2f(xvmax, yvmin);
+		glVertex2f(xvmax, yvmax);
+		glVertex2f(xvmin, yvmax);
+		glEnd();
+
+		glColor3f(0, 0, 1);
+		glBegin(GL_LINES);
+		glVertex2d(vx0, vy0);
+		glVertex2d(vx1, vy1);
+		glEnd();
+	}
+}
 
 void display()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
-	//draw the line with red color
-	glColor3f(1.0, 0.0, 0.0);
-	for (int i = 0; i < n; i++)
-	{
-		glBegin(GL_LINES);
-		glVertex2d(ls[i].x1, ls[i].y1);
-		glVertex2d(ls[i].x2, ls[i].y2);
-		glEnd();
-	}
-	//draw a blue colored window
-	glColor3f(0.0, 0.0, 1.0);
+
+	glColor3f(0, 0, 1);
 	glBegin(GL_LINE_LOOP);
 	glVertex2f(xmin, ymin);
 	glVertex2f(xmax, ymin);
@@ -99,41 +133,47 @@ void display()
 	glVertex2f(xmin, ymax);
 	glEnd();
 	for (int i = 0; i < n; i++)
-		LiangBarskyLineClipAndDraw(ls[i].x1, ls[i].y1, ls[i].x2, ls[i].y2);
+	{
+		glBegin(GL_LINES);
+		glVertex2d(ls[i].x1, ls[i].y1);
+		glVertex2d(ls[i].x2, ls[i].y2);
+		glEnd();
+	}
+
+	for (int i = 0; i < n; i++)
+		cohensuther(ls[i].x1, ls[i].y1, ls[i].x2, ls[i].y2);
+
 	glFlush();
 }
-
 void myinit()
 {
-	glClearColor(1.0, 1.0, 1.0, 1.0);
-	glColor3f(1.0, 0.0, 0.0);
-	glLineWidth(2.0);
+	glClearColor(1, 1, 1, 1);
+	glColor3f(1, 0, 0);
+	glPointSize(1.0);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluOrtho2D(0.0, 499.0, 0.0, 499.0);
+	gluOrtho2D(0, 500, 0, 500);
 }
 
-int main(int argc, char** argv)
+void main(int argc, char** argv)
 {
+	printf("Enter window coordinates (xmin ymin xmax ymax): \n");
+	scanf("%lf%lf%lf%lf", &xmin, &ymin, &xmax, &ymax);
+	printf("Enter viewport coordinates (xvmin yvmin xvmax yvmax) :\n");
+	scanf("%lf%lf%lf%lf", &xvmin, &yvmin, &xvmax, &yvmax);
+	printf("Enter no. of lines:\n");
+	scanf("%d", &n);
+	for (int i = 0; i < n; i++)
+	{
+		printf("Enter line endpoints (x1 y1 x2 y2):\n");
+		scanf("%d%d%d%d", &ls[i].x1, &ls[i].y1, &ls[i].x2, &ls[i].y2);
+	}
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
 	glutInitWindowSize(500, 500);
 	glutInitWindowPosition(0, 0);
-
-	printf("Enter window coordinates: (xmin ymin xmax ymax) \n");
-	scanf("%lf%lf%lf%lf", &xmin, &ymin, &xmax, &ymax);
-	printf("Enter viewport coordinates: (xvmin yvmin xvmax yvmax) \n");
-	scanf("%lf%lf%lf%lf", &xvmin, &yvmin, &xvmax, &yvmax);
-	printf("Enter no. of lines:\n");
-	scanf("%d", &n);
-
-	for (int i = 0; i < n; i++)
-	{
-		printf("Enter coordinates: (x1 y1 x2 y2)\n");
-		scanf("%d%d%d%d", &ls[i].x1, &ls[i].y1, &ls[i].x2, &ls[i].y2);
-	}
-	glutCreateWindow("Liang Barsky Line Clipping Algorithm");
-	glutDisplayFunc(display);
+	glutCreateWindow("clip");
 	myinit();
+	glutDisplayFunc(display);
 	glutMainLoop();
 }
