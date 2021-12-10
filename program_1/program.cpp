@@ -1,47 +1,49 @@
-#include <iostream>
-#include <GL/glut.h>
-#include <time.h>
+#include<stdio.h>
+#include<iostream>
+#include<gl\glut.h>
+
 using namespace std;
-int x1, x2, yc1, y2;
+
 int flag = 0;
+int x1, yc1, x2, y2;
+
 void draw_pixel(int x, int y)
 {
-	glColor3f(1, 0, 0);
+	glColor3d(1, 0, 0);
 	glBegin(GL_POINTS);
 	glVertex2i(x, y);
 	glEnd();
 	glFlush();
-
 }
+
 void draw_line()
 {
-	int dx, dy, i, e;
-	int incx, incy, inc1, inc2;
-	int x, y;
-	dx = x2 - x1;
-	dy = y2 - yc1;
-	if (dx < 0)dx = -dx;
-	if (dy < 0)dy = -dy;
-	incx = 1;
+	int dx = x2 - x1;
+	int dy = y2 - yc1;
+	if (dx < 0)
+		dx = -dx;
+	if(dy < 0)
+		dy = -dy;
+	int incx = 1;
 	if (x2 < x1)
 		incx = -1;
-	incy = 1;
+	int incy = 1;
 	if (y2 < yc1)
 		incy = -1;
-	x = x1;
-	y = yc1;
+	int x = x1;
+	int y = yc1;
 	if (dx > dy)
 	{
 		draw_pixel(x, y);
-		e = 2 * dy - dx;
-		inc1 = 2 * (dy - dx);
-		inc2 = 2 * dy;
-		for (i = 0; i < dx; i++)
+		int e = 2 * dy - dx;
+		int inc1 = 2 * (dy - dx);
+		int inc2 = 2 * dy;
+		for (int i = 0; i < dx; i++)
 		{
 			if (e > 0)
 			{
-				y += incy;
 				e += inc1;
+				y += incy;
 			}
 			else
 				e += inc2;
@@ -51,89 +53,94 @@ void draw_line()
 	}
 	else
 	{
-
 		draw_pixel(x, y);
-		e = 2 * dx - dy;
-		inc1 = 2 * (dx - dy);
-		inc2 = 2 * dx;
-		for (i = 0; i < dy; i++)
+		int e = 2 * dx - dy;
+		int inc1 = 2 * (dx - dy);
+		int inc2 = 2 * dx;
+		for (int i = 0; i < dy; i++)
 		{
 			if (e > 0)
 			{
-				x += incx;
 				e += inc1;
-
+				x += incx;
 			}
 			else
-
 				e += inc2;
 			y += incy;
-
 			draw_pixel(x, y);
 		}
 	}
-	glFlush();
 }
+void mymouse(int btn,int state, int x, int y)
+{
+	if (btn == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+	{
+		if (flag == 0)
+		{
+			printf("values of x1 and y1 is\n");
+			x1 = x - 250;
+			yc1 = 250 - y;
+			flag++;
+			cout << x1 << " " << yc1 << endl;
+		}
+		else
+		{
+			printf("values of x2 and y2 is \n");
+			x2 = x - 250;
+			y2 = 250 - y;
+			flag = 0;
+			cout << x2 << " " << y2 << endl;
+			draw_line();
+		}
+	}
+}
+
 void myinit()
 {
 	glClear(GL_COLOR_BUFFER_BIT);
-	glClearColor(1, 1, 1, 1);
+	glClearColor(1, 1, 1, 0);
 	gluOrtho2D(-250, 250, -250, 250);
 }
-void MyMouse(int button, int state, int x, int y)
+
+void mydisplay()
 {
-	switch (button)
+
+}
+int flag1 = 0;
+void mykeyboard(unsigned char key, int x, int y)
+{
+	if (key == 'Q' || key ==  'q')
 	{
-	case GLUT_LEFT_BUTTON:
-		if (state == GLUT_DOWN)
+		if (flag1 == 0)
 		{
-			if (flag == 0)
-			{
-				printf("Defining x1,y1");
-				x1 = x - 250;
-				yc1 = 250 - y;
-				flag++;
-				cout << x1 << " " << yc1 << " \n";
-			}
-			else
-			{
-				printf("Defining x2,y2");
-				x2 = x - 250;
-				y2 = 250 - y;
-				flag = 0;
-				cout << x2 << " " << y2 << " \n";
-				draw_line();
-
-			}
-
+			printf("values of x1 and y1 is\n");
+			x1 = x - 250;
+			yc1 = 250 - y;
+			flag1++;
+			cout << x1 << " " << yc1 << endl;
 		}
-		break;
+		else
+		{
+			printf("values of x2 and y2 is \n");
+			x2 = x - 250;
+			y2 = 250 - y;
+			flag1 = 0;
+			cout << x2 << " " << y2 << endl;
+			draw_line();
+		}
 	}
 }
-void display()
-{}
-int main(int ac, char* av[])
+
+int main(int argc, char** argv)
 {
-	/*
-	//FOR KEYBOARD
-	cout<<"X1\n";
-	cin>>x1;
-	cout<<"Y1\n";
-	cin>>yc1;
-	cout<<"X2\n";
-	cin>>x2;
-	cout<<"Y2\n";
-	cin>>y2;
-	//END KEYBOARD
-	*/
-	glutInit(&ac, av);
-	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_SINGLE|GLUT_RGB);
+	glutInitWindowPosition(100, 100);
 	glutInitWindowSize(500, 500);
-	glutInitWindowPosition(100, 200);
-	glutCreateWindow("LINE");
+	glutCreateWindow("bresenham's line");
 	myinit();
-	glutMouseFunc(MyMouse); //INCLUDE TO USE MOUSE, REMOVE WHILE USING KEYBOARD
-	//draw_line(); //INCLUDE TO USE KEYBOARD, REMOVE WHILE USING MOUSE
-	glutDisplayFunc(display);
+	glutMouseFunc(mymouse);
+	glutKeyboardFunc(mykeyboard);
+	glutDisplayFunc(mydisplay);
 	glutMainLoop();
 }
