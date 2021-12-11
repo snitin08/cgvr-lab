@@ -1,96 +1,93 @@
-#include<stdio.h>
+#include<stdlib.h>
 #include<gl/glut.h>
-#include<math.h>
+#include<algorithm>
+#include<iostream>
+#include<windows.h>
 
-void sphere()
-{
-double c=3.142/180, phi, phir, phir20,theta, thetar, x, y, z, c80, xc, yc, r; // converting to radians
-// to get longitudes
-for(phi=-80.0; phi<=60.0; phi+=20.0)
-{
-	//phi=-50.0;
-	phir=c*phi;  //  in radians – for the 1st point
-	phir20=c*(phi+20);  // for the 2nd point
-	glBegin(GL_QUAD_STRIP);
-	// to get latitudes
-	for (theta=-180.0; theta<=180.0; theta+=20.0)
+using namespace std;
+float x[100], y[100]; //= { 0,0,20,100,100 }, y[] = { 0,100,50,100,0 };
+
+int n, m;
+int wx = 500, wy = 500;
+static float intx[10] = { 0 };
+
+void draw_line(float x1, float y1, float x2, float y2) {
+	Sleep(100);
+	glColor3f(1, 0, 0);
+	glBegin(GL_LINES);
+	glVertex2f(x1, y1);
+	glVertex2f(x2, y2);
+	glEnd();
+	glFlush();
+
+}
+
+void edgeDetect(float x1, float y1, float x2, float y2, int scanline) {
+
+	float temp;
+	if (y2 < y1) {
+
+		temp = x1; x1 = x2; x2 = temp;
+		temp = y1; y1 = y2; y2 = temp;
+	}
+
+	if (scanline > y1 && scanline < y2)
+		intx[m++] = x1 + (scanline - y1) * (x2 - x1) / (y2 - y1);
+}
+
+void scanfill(float x[], float y[]) {
+	for (int s1 = 0; s1 <= wy; s1++) {
+		m = 0;
+		for (int i = 0; i < n; i++) {
+
+			edgeDetect(x[i], y[i], x[(i + 1) % n], y[(i + 1) % n], s1);
+		}
+		sort(intx, (intx + m));
+		if (m >= 2)
+			for (int i = 0; i < m; i = i + 2)
+				draw_line(intx[i], s1, intx[i + 1], s1);
+
+	}
+
+}
+
+void display_filled_polygon() {
+
+	glClear(GL_COLOR_BUFFER_BIT);
+	glLineWidth(2);
+	glBegin(GL_LINE_LOOP);
+	for (int i = 0; i < n; i++)
+		glVertex2f(x[i], y[i]);
+	glEnd();
+	scanfill(x, y);
+	//glFlush();
+}
+
+void myInit() {
+
+	glClearColor(1, 1, 1, 1);
+	glColor3f(0, 0, 1);
+	glPointSize(1);
+
+	gluOrtho2D(0, wx, 0, wy);
+
+}
+void main(int ac, char* av[]) {
+	glutInit(&ac, av);
+	printf("Enter no. of sides: \n");
+	scanf("%d", &n);
+	printf("Enter coordinates of endpoints: \n");
+	for (int i = 0; i < n; i++)
 	{
-		thetar=c*theta;  // =-180*c = -3.132 – 1st time
-		
-		x=sin(thetar)*cos(phir); 
-		y=cos(thetar)*cos(phir);
-		z=sin(phir);
-		glVertex3d(x,y,z); // 1st point
-
-		phir20=c*(phi+20);
-		x=sin(thetar)*cos(phir20); 
-		y=cos(thetar)*cos(phir20);
-		z=sin(phir20);
-		glVertex3d(x,y,z); // 2nd point
-		
-		
-
+		printf("X-coord Y-coord: \n");
+		scanf("%f %f", &x[i], &y[i]);
 	}
-	glEnd();
-}
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+	glutInitWindowSize(500, 500);
+	glutInitWindowPosition(0, 0);
+	glutCreateWindow("scanline");
+	glutDisplayFunc(display_filled_polygon);
+	myInit();
+	glutMainLoop();
 
-//1st pole – use triangle fans
-	glBegin(GL_TRIANGLE_FAN);
-	glVertex3d(0.0,0.0,1.0);   // top pole
-	c80=c*80.0;
-	z=sin(c80);
-	for(theta=-180.0;theta<=180.0;theta+=20.0)
-	{	thetar=c*theta;
-		x=sin(thetar)*cos(c80);
-		y=cos(thetar)*cos(c80);
-		glVertex3d(x,y,z);	
-	}
-	glEnd();
-	//2nd pole – use triangle fans
-	glBegin(GL_TRIANGLE_FAN);
-	glVertex3d(0.0,0.0,-1.0); // bottom pole
-	z=-sin(c80);
-	for(theta=-180.0;theta<=180.0;theta+=20.0)
-	{	
-		thetar=c*theta;
-		x=sin(thetar)*cos(c80);
-		y=cos(thetar)*cos(c80);
-		glVertex3d(x,y,z);	
-	}
-	glEnd();
-
-	}
-void display()
-{
-	int j;
-glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-glMatrixMode(GL_MODELVIEW);
-glLoadIdentity();
-glTranslatef(0.0, 0.0, -1);
-glRotatef(-90.0, 0.0, 1.0, 0.0);
-
-sphere();
-
-glFlush();
-}
-void myinit()
-{
-glClearColor(1.0,1.0,1.0,0);
-glColor3f(0,0,1.0);
-glPointSize(1.0);
-gluOrtho2D(-1,1,-1,1);
-}
-void main(int argc,char *argv[])
-{
-
-glutInit(&argc,argv);
-glutInitDisplayMode(GLUT_SINGLE|GLUT_RGB|GLUT_DEPTH);
-glutInitWindowSize(500,500);
-glutInitWindowPosition(100,100);
-glutCreateWindow("Sphere Display");
-glutDisplayFunc(display);
-myinit();
-glutMainLoop();
 }
