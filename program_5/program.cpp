@@ -1,74 +1,114 @@
-#include<gl/glut.h>
 #include<stdio.h>
+#include<GL\glut.h>
 
-int m;
 typedef float point[3];
-point tetra[4] = { {0,100,-100},{0,0,100},{100,-100,-100},{-100,-100,-100} };
-void tetrahedron(void);
-void myinit(void);
-void divide_triangle(point a, point b, point c, int m);
-void draw_triangle(point p1, point p2, point p3);
-int main(int argv, char** argc)
-{
-	//int m;
-	printf("Enter the number of iterations: ");
-	scanf_s("%d", &m);
-	glutInit(&argv, argc);
-	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH);
-	glutInitWindowPosition(100, 200);
-	glutInitWindowSize(500, 500);
-	glutCreateWindow("Seirpinski Gasket");
-	glutDisplayFunc(tetrahedron);
-	glEnable(GL_DEPTH_TEST);
-	myinit();
-	glutMainLoop();
-}
-void divide_triangle(point a, point b, point c, int m)
-{
-	point v1, v2, v3;
-	int j;
-	if (m > 0) {
-		for (j = 0; j < 3; j++)
-			v1[j] = (a[j] + b[j]) / 2;
-		for (j = 0; j < 3; j++)
-			v2[j] = (a[j] + c[j]) / 2;
-		for (j = 0; j < 3; j++)
-			v3[j] = (b[j] + c[j]) / 2;
+int n;
+point tetrahedron[4] = { {0,250,-250},{0,0,250},{250,-250,-250},{-250,-250,-250} };
 
-		divide_triangle(a, v1, v2, m - 1);
-		divide_triangle(c, v2, v3, m - 1);
-		divide_triangle(b, v3, v1, m - 1);
+void draw_triangle(point a, point b, point c)
+{
+	glVertex3fv(a);
+	glVertex3fv(b);
+	glVertex3fv(c);
+}
+
+void draw_tetrahedron(point a, point b, point c, point d)
+{
+	glColor3f(1, 1, 0);
+	draw_triangle(a,b,c);
+	glColor3f(0, 1, 0);
+	draw_triangle(a,c,d);
+	glColor3f(1, 0, 0);
+	draw_triangle(a,b,d);
+	glColor3f(0, 0, 1);
+	draw_triangle(b,c,d);
+}
+
+void divide_tetrahedron(point p1 ,point p2, point p3,point p4, int n)
+{
+	point mid[6];
+	if (n > 0)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			mid[0][j] = (p1[j] + p2[j]) / 2;
+		}
+		for (int j = 0; j < 3; j++)
+		{
+			mid[1][j] = (p1[j] + p3[j]) / 2;
+		}
+		for (int j = 0; j < 3; j++)
+		{
+			mid[2][j] = (p1[j] + p4[j]) / 2;
+		}
+		for (int j = 0; j < 3; j++)
+		{
+			mid[3][j] = (p2[j] + p3[j]) / 2;
+		}
+		for (int j = 0; j < 3; j++)
+		{
+			mid[4][j] = (p3[j] + p4[j]) / 2;
+		}
+		for (int j = 0; j < 3; j++)
+		{
+			mid[5][j] = (p2[j] + p4[j]) / 2;
+		}
+		divide_tetrahedron(p1, mid[0], mid[1], mid[2], n - 1);
+		divide_tetrahedron(p2, mid[0], mid[3], mid[5], n - 1);
+		divide_tetrahedron(p3, mid[1], mid[3], mid[4], n - 1);
+		divide_tetrahedron(p4, mid[2], mid[4], mid[5], n - 1);
 	}
 	else
-		draw_triangle(a, b, c);
+	{
+		draw_tetrahedron(p1, p2, p3, p4);
+	}
 }
+
 void myinit()
 {
-	glClearColor(1, 1, 1, 1);
-
-	//glFlush();
-	glOrtho(-500.0, 500.0, -500.0, 500.0, -500.0, 500.0);
-	//gluOrtho(-500.0,500.0,-500.0,500.0,-500.0,500.0);
+	glClearColor(0, 0, 0, 0);
+	glOrtho(-300, 300, -300, 300,-300,300);
 }
-void tetrahedron(void)
+
+void display()
 {
-	//myinit();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glColor3f(1.0, 0.0, 0.0);
-	divide_triangle(tetra[0], tetra[1], tetra[2], m);
-	glColor3f(0.0, 1.0, 0.0);
-	divide_triangle(tetra[3], tetra[2], tetra[1], m);
-	glColor3f(0.0, 0.0, 1.0);
-	divide_triangle(tetra[0], tetra[3], tetra[1], m);
-	glColor3f(0.0, 0.0, 0.0);
-	divide_triangle(tetra[0], tetra[2], tetra[3], m);
+	glBegin(GL_TRIANGLES);
+		divide_tetrahedron(tetrahedron[0], tetrahedron[1],tetrahedron[2],tetrahedron[3],n);
+	glEnd();
 	glFlush();
 }
-void draw_triangle(point p1, point p2, point p3)
+
+void reshape(int w, int h)
 {
-	glBegin(GL_TRIANGLES);
-	glVertex3fv(p1);
-	glVertex3fv(p2);
-	glVertex3fv(p3);
-	glEnd();
+	glViewport(0, 0, w, h);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	if (h >= w)
+	{
+		glOrtho(-300, 300, -300 * (GLdouble)h / (GLdouble)w, 300 * (GLdouble)h / (GLdouble)w, -300, 300);
+	}
+	else
+	{
+		glOrtho(-300 * (GLdouble)w / (GLdouble)h, 300 * (GLdouble)w / (GLdouble)h, -300, 300, -300, 300);
+	}
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	glutPostRedisplay();
+}
+
+void main(int argc,char ** argv)
+{
+	glutInit(&argc, argv);
+	printf("enter the number of iterations ");
+	scanf_s("%d", &n);
+	glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH);
+	glutInitWindowSize(400, 400);
+	glutInitWindowPosition(0, 0);
+	glutCreateWindow("sierpenski");
+	glutReshapeFunc(reshape);
+	glutDisplayFunc(display);
+	myinit();
+	glEnable(GL_DEPTH_TEST);
+	glutMainLoop();
 }
